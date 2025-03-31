@@ -18,6 +18,8 @@ SDL_Texture* bodyStraightTexture = nullptr;
 SDL_Texture* bodyTurnTexture = nullptr;
 SDL_Texture* tailTexture = nullptr;
 SDL_Texture* tristanaTexture = nullptr;
+SDL_Texture* pizzaTexture = nullptr;
+SDL_Texture* beerTexture = nullptr;
 Mix_Music* backgroundMusic = nullptr;
 TTF_Font* font = nullptr;
 SDL_Color textColor = { 255, 255, 255, 255 };
@@ -32,8 +34,8 @@ struct Point {
 };
 
 std::vector<Point> snake = { {10, 10}, {9, 10}, {8, 10} };
-Point food = { 5, 5 };
-std::vector<Point> obstacles;
+Point pizza = { 5, 5 };
+std::vector<Point> beer;
 int dx = 1, dy = 0;
 
 void initSDL() {
@@ -51,6 +53,8 @@ void initSDL() {
     bodyTurnTexture = SDL_CreateTextureFromSurface(renderer, IMG_Load("body_turn.png"));
     tailTexture = SDL_CreateTextureFromSurface(renderer, IMG_Load("tail.png"));
     tristanaTexture = SDL_CreateTextureFromSurface(renderer, IMG_Load("Tristana_51.png"));
+    pizzaTexture = SDL_CreateTextureFromSurface(renderer, IMG_Load("pizza.png"));
+    beerTexture = SDL_CreateTextureFromSurface(renderer, IMG_Load("beer.png"));
 
     backgroundMusic = Mix_LoadMUS("newjeans.wav");
     if (backgroundMusic) {
@@ -60,14 +64,14 @@ void initSDL() {
     font = TTF_OpenFont("ShinyCrystal-Yq3z4.ttf", 24);
 }
 
-void spawnFood() {
-    food.x = rand() % (SCREEN_WIDTH / CELL_SIZE);
-    food.y = rand() % (SCREEN_HEIGHT / CELL_SIZE);
+void spawnPizza() {
+    pizza.x = rand() % (SCREEN_WIDTH / CELL_SIZE);
+    pizza.y = rand() % (SCREEN_HEIGHT / CELL_SIZE);
 }
 
-void spawnObstacle() {
+void spawnBeer() {
     Point obs = { rand() % (SCREEN_WIDTH / CELL_SIZE), rand() % (SCREEN_HEIGHT / CELL_SIZE) };
-    obstacles.push_back(obs);
+    beer.push_back(obs);
 }
 
 void moveSnake() {
@@ -85,7 +89,7 @@ void moveSnake() {
         }
     }
 
-    for (const auto& obs : obstacles) {
+    for (const auto& obs : beer) {
         if (newHead.x == obs.x && newHead.y == obs.y) {
             running = false;
             return;
@@ -93,43 +97,15 @@ void moveSnake() {
     }
 
     snake.insert(snake.begin(), newHead);
-    if (newHead.x == food.x && newHead.y == food.y) {
+    if (newHead.x == pizza.x && newHead.y == pizza.y) {
         score += 10;
-        speed = std::max(30, speed - 5);  // Giảm delay để tăng tốc độ
-        spawnFood();
-        spawnObstacle();
+        speed = std::max(30, speed - 5);
+        spawnPizza();
+        spawnBeer();
     }
     else {
         snake.pop_back();
     }
-}
-
-void renderMenu() {
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
-
-    SDL_Surface* surface = TTF_RenderText_Solid(font, "Press ENTER to Start", textColor);
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-
-    SDL_Rect dstRect = { SCREEN_WIDTH / 2 - surface->w / 2, SCREEN_HEIGHT / 2 - surface->h / 2, surface->w, surface->h };
-    SDL_RenderCopy(renderer, texture, NULL, &dstRect);
-
-    SDL_FreeSurface(surface);
-    SDL_DestroyTexture(texture);
-
-    SDL_RenderPresent(renderer);
-}
-
-void renderScore() {
-    std::string scoreText = "Score: " + std::to_string(score);
-    SDL_Surface* surface = TTF_RenderText_Solid(font, scoreText.c_str(), textColor);
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-
-    SDL_Rect dstRect = { 10, 10, surface->w, surface->h };
-    SDL_RenderCopy(renderer, texture, NULL, &dstRect);
-
-    SDL_FreeSurface(surface);
-    SDL_DestroyTexture(texture);
 }
 
 void render() {
@@ -149,42 +125,49 @@ void render() {
         }
     }
 
-    SDL_SetRenderDrawColor(renderer, 255, 255, 160, 255);
-    SDL_Rect foodRect = { food.x * CELL_SIZE, food.y * CELL_SIZE, CELL_SIZE, CELL_SIZE };
-    SDL_RenderFillRect(renderer, &foodRect);
+    SDL_Rect pizzaRect = { pizza.x * CELL_SIZE, pizza.y * CELL_SIZE, CELL_SIZE, CELL_SIZE };
+    SDL_RenderCopy(renderer, pizzaTexture, NULL, &pizzaRect);
 
-    SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
-    for (const auto& obs : obstacles) {
+    for (const auto& obs : beer) {
         SDL_Rect obsRect = { obs.x * CELL_SIZE, obs.y * CELL_SIZE, CELL_SIZE, CELL_SIZE };
-        SDL_RenderFillRect(renderer, &obsRect);
+        SDL_RenderCopy(renderer, beerTexture, NULL, &obsRect);
     }
 
-    renderScore();
+    std::string scoreText = "Score: " + std::to_string(score);
+    SDL_Surface* scoreSurface = TTF_RenderText_Solid(font, scoreText.c_str(), textColor);
+    SDL_Texture* scoreTexture = SDL_CreateTextureFromSurface(renderer, scoreSurface);
+    SDL_Rect scoreRect = { 10, 10, scoreSurface->w, scoreSurface->h };
+    SDL_RenderCopy(renderer, scoreTexture, NULL, &scoreRect);
+    SDL_FreeSurface(scoreSurface);
+    SDL_DestroyTexture(scoreTexture);
+
+    SDL_RenderPresent(renderer);
+}
+
+void renderMenu() {
+    SDL_RenderClear(renderer);
+    SDL_Surface* surface = TTF_RenderText_Solid(font, "Press SPACE to Start", textColor);
+    SDL_Texture* message = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_Rect messageRect = { SCREEN_WIDTH / 4, SCREEN_HEIGHT / 2, surface->w, surface->h };
+    SDL_RenderCopy(renderer, message, NULL, &messageRect);
+    SDL_FreeSurface(surface);
+    SDL_DestroyTexture(message);
     SDL_RenderPresent(renderer);
 }
 
 void handleInput() {
-    SDL_Event e;
-    while (SDL_PollEvent(&e)) {
-        if (e.type == SDL_QUIT) {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
             running = false;
         }
-        else if (e.type == SDL_KEYDOWN) {
-            if (inMenu) {
-                if (e.key.keysym.sym == SDLK_RETURN) {
-                    inMenu = false;
-                }
-                else if (e.key.keysym.sym == SDLK_ESCAPE) {
-                    running = false;
-                }
-            }
-            else {
-                switch (e.key.keysym.sym) {
-                case SDLK_UP: if (dy == 0) { dx = 0; dy = -1; } break;
-                case SDLK_DOWN: if (dy == 0) { dx = 0; dy = 1; } break;
-                case SDLK_LEFT: if (dx == 0) { dx = -1; dy = 0; } break;
-                case SDLK_RIGHT: if (dx == 0) { dx = 1; dy = 0; } break;
-                }
+        else if (event.type == SDL_KEYDOWN) {
+            switch (event.key.keysym.sym) {
+            case SDLK_UP: if (dy == 0) { dx = 0; dy = -1; } break;
+            case SDLK_DOWN: if (dy == 0) { dx = 0; dy = 1; } break;
+            case SDLK_LEFT: if (dx == 0) { dx = -1; dy = 0; } break;
+            case SDLK_RIGHT: if (dx == 0) { dx = 1; dy = 0; } break;
+            case SDLK_SPACE: inMenu = false; break;
             }
         }
     }
@@ -193,7 +176,7 @@ void handleInput() {
 int main(int argc, char* argv[]) {
     srand(time(0));
     initSDL();
-    spawnFood();
+    spawnPizza();
 
     while (running) {
         if (inMenu) {
@@ -208,5 +191,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    SDL_DestroyTexture(pizzaTexture);
+    SDL_DestroyTexture(beerTexture);
     return 0;
 }
